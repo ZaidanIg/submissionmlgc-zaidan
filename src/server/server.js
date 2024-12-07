@@ -23,26 +23,30 @@ const Hapi = require('@hapi/hapi');
     server.route(routes);
 
     server.ext('onPreResponse', function (request, h) {
+        
         const response = request.response;
- 
-        if (response instanceof InputError) {
+
+        if (response.isBoom && response.output.statusCode === 413) {
             const newResponse = h.response({
                 status: 'fail',
-                message: `${response.message}`
-            })
-            newResponse.code(response.statusCode)
+                message: 'Payload content length greater than maximum allowed: 1000000',
+            });
+                        
+            newResponse.code(413);
             return newResponse;
         }
- 
-        if (response.isBoom) {
+
+        if (response instanceof InputError || response.isBoom) {
+            const statusCode = response instanceof InputError ? response.statusCode : response.output.statusCode;
             const newResponse = h.response({
                 status: 'fail',
-                message: response.message
-            })
-            newResponse.code(response.output.statusCode)
+                message: 'Terjadi kesalahan dalam melakukan prediksi',
+            });
+
+            newResponse.code(parseInt(statusCode));
             return newResponse;
         }
- 
+
         return h.continue;
     });
 
